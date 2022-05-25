@@ -49,19 +49,26 @@ void cnd_wait(cnd_t *p_condvar, mtx_t *p_mutex);
 // 
 // THREAD POOL
 // 
+// TODO: add task wachdog timer!
+// 
 enum TPTASK_PRIORITY {
 	TPTP_LOW = 0,
 	TPTP_NORMAL,
 	TPTP_HIGH
 };
 
+enum TP_STATUS {
+	TPSTATUS_RUNNING = 0,
+	TPSTATUS_FINISH
+};
+
 typedef struct tpstatus_s {
 	int active_threads;
-	int completed_tasks;
-	int remaining_tasks;
+	int task_sequence;
+	int task_stack_size;
 } tpstatus_t;
 
-typedef (*TASKPROC)(tpstatus_t status, void *arg);
+typedef (*TASKPROC)(const tpstatus_t *p_status, void *arg);
 
 typedef struct tptask_s {
 	int priority;
@@ -82,6 +89,7 @@ typedef struct threadpool_s {
 	cnd_t cvfinish;
 
 	int state;
+	tpstatus_t statistic;
 } threadpool_t;
 
 int threadpool_init(threadpool_t *p_tp, int tasks_limit);

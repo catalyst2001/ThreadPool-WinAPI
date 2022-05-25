@@ -79,7 +79,7 @@ void cnd_init(cnd_t *p_condvar)
 
 void cnd_wake_one(cnd_t *p_condvar)
 {
-	WakeAllConditionVariable(&p_condvar->cv);
+	WakeConditionVariable(&p_condvar->cv);
 }
 
 void cnd_wake_all(cnd_t *p_condvar)
@@ -92,31 +92,29 @@ void cnd_wait(cnd_t *p_condvar, mtx_t *p_mutex)
 	SleepConditionVariableCS(&p_condvar->cv, &p_mutex->cs, INFINITE);
 }
 
-__inline tptask_t threadpool_front_task(threadpool_t *p_tp)
-{
-	tptask_t task = p_tp->p_tasks[p_tp->current_task];
-	if (p_tp->current_task > 0)
-		InterlockedDecrement(&p_tp->current_task);
-
-	return task;
-}
-
-__inline bool stack_empty(threadpool_t *p_tp) { return !p_tp->current_task; }
-
 ///////////////////////////////////////////////////////////////////////////////////
 void *worker_thread_proc(void *p_arg)
 {
 	threadpool_t *p_tp = (threadpool_t *)p_arg;
-	while (1) {
-		cnd_wait(&p_tp->cvtask, );
-		if (!stack_empty(p_tp)) {
-			mutex_lock(&p_tp->mutex);
-			tptask_t task = threadpool_front_task(p_tp);
-			mutex_unlock(&p_tp->mutex);
+	while (p_tp->state == TPSTATUS_RUNNING) {
+		tptask_t task;
+		mutex_lock(&p_tp->mutex);
 
-			tpstatus_t tpstatus;
-			task.taskproc(tpstatus, task.p_arg);
-		}
+		//if stack is empty
+		if (!p_tp->current_task)
+			cnd_wait(&p_tp->cvtask, &p_tp->mutex); //freeze threads
+
+		task = p_tp->p_tasks[p_tp->current_task];
+		if (p_tp->current_task > 0)
+			p_tp->current_task--;
+
+		// update tasks statistics
+		p_tp->statistic.active_threads = p_tp->num_of_threads;
+		p_tp->statistic.task_sequence = p_tp->current_task;
+		p_tp->statistic.task_stack_size = p_tp->tasks_capacity;
+		mutex_unlock(&p_tp->mutex);
+
+		task.taskproc(&p_tp->statistic, task.p_arg); // run asynch
 	}
 	return NULL;
 }
@@ -135,9 +133,14 @@ int threadpool_init(threadpool_t *p_tp, int tasks_limit)
 			p_tp->p_threads = (thread_t *)calloc(p_tp->num_of_threads, sizeof(tptask_t)); /* alloc memory for threads handles */
 			if (p_tp->p_threads) {
 				for (int i = 0; i < p_tp->num_of_threads; i++) {
-					if (thread_create(&p_tp->p_threads[i], worker_thread_proc, p_tp))
-						thread_setaffinity(&p_tp->p_threads[i], (void *)(1 << i));
+					//thread_create(&p_tp->p_threads[i], worker_thread_proc, p_tp);
+					if (thread_create(&p_tp->p_threads[i], worker_thread_proc, p_tp)) {
+						//thread_setaffinity(&p_tp->p_threads[i], (void *)(1 << i));
+						SetThreadAffinityMask(p_tp->p_threads[i].handle, (1 << i));
+					}
 				}
+				p_tp->state = TPSTATUS_RUNNING; /* ok. set running state */
+				return 0;
 			}
 			assert(p_tp->p_threads);
 			return 3;
@@ -153,11 +156,14 @@ int threadpool_add_task(threadpool_t *p_tp, int priority, TASKPROC taskproc, voi
 {
 	mutex_lock(&p_tp->mutex);
 	if (p_tp->current_task < p_tp->tasks_capacity) {
+		p_tp->current_task++; //TODO: KOSTYL!
 		tptask_t *p_task = &p_tp->p_tasks[p_tp->current_task];
 		p_task->priority = priority;
 		p_task->taskproc = taskproc;
 		p_task->p_arg = p_arg;
-		p_tp->current_task++;
+		cnd_wake_one(&p_tp->cvtask);
+
+		printf("task %d | proc 0x%x | arg 0x%x\n", p_tp->current_task, p_task->taskproc, p_task->p_arg);
 	}
 	mutex_unlock(&p_tp->mutex);
 	return 0;
@@ -181,9 +187,7 @@ int threadpool_resume(threadpool_t *p_tp)
 
 int threadpool_set_state(threadpool_t *p_tp, int _state)
 {
-	int old_state = p_tp->state;
-	p_tp->state = _state;
-	return old_state;
+	return InterlockedExchange(&p_tp->state, _state);
 }
 
 int threadpool_join(threadpool_t *p_tp)
@@ -191,5 +195,21 @@ int threadpool_join(threadpool_t *p_tp)
 	for (int i = 0; i < p_tp->num_of_threads; i++)
 		thread_join(&p_tp->p_threads[i]);
 
+	return 1;
+}
+
+int threadpool_free(threadpool_t *p_tp)
+{
+	threadpool_suspend(p_tp);
+	if (p_tp->p_tasks)
+		free(p_tp->p_tasks);
+
+	if (p_tp->p_threads) {
+		for (int i = 0; i < p_tp->num_of_threads; i++)
+			thread_detach(&p_tp->p_threads[i]);
+
+		free(p_tp->p_threads);
+	}
+	mutex_deinit(&p_tp->mutex);
 	return 1;
 }
