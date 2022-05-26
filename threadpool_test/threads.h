@@ -3,9 +3,9 @@
 #include <stdbool.h>
 #include <assert.h>
 
-// 
+// ---------------------
 // Threads api
-// 
+// ---------------------
 typedef struct thread_s {
 	HANDLE handle;
 } thread_t;
@@ -21,9 +21,9 @@ int thread_setaffinity(thread_t *p_threadhandle, void *p_data);
 int thread_join(thread_t *p_threadhandle);
 int thread_detach(thread_t *p_threadhandle);
 
-// 
+// ---------------------
 // mutex
-// 
+// ---------------------
 typedef struct mtx_s {
 	CRITICAL_SECTION cs;
 } mtx_t;
@@ -33,9 +33,9 @@ void mutex_lock(mtx_t *p_mutex);
 void mutex_unlock(mtx_t *p_mutex);
 void mutex_deinit(mtx_t *p_mutex);
 
-// 
+// ---------------------
 // condition variable
-// 
+// ---------------------
 typedef struct cnd_s {
 	CONDITION_VARIABLE cv;
 } cnd_t;
@@ -46,11 +46,11 @@ void cnd_wake_all(cnd_t *p_condvar);
 void cnd_wait(cnd_t *p_condvar, mtx_t *p_mutex);
 
 
-// 
+// ---------------------
 // THREAD POOL
 // 
 // TODO: add task wachdog timer!
-// 
+// ---------------------
 enum TPTASK_PRIORITY {
 	TPTP_LOW = 0,
 	TPTP_NORMAL,
@@ -68,7 +68,7 @@ typedef struct tpstatus_s {
 	int task_stack_size;
 } tpstatus_t;
 
-typedef (*TASKPROC)(const tpstatus_t *p_status, void *arg);
+typedef void (*TASKPROC)(const tpstatus_t *p_status, void *arg);
 
 typedef struct tptask_s {
 	int priority;
@@ -86,7 +86,7 @@ typedef struct threadpool_s {
 
 	mtx_t mutex;
 	cnd_t cvtask;
-	cnd_t cvfinish;
+	//cnd_t cvfinish;
 
 	int state;
 	tpstatus_t statistic;

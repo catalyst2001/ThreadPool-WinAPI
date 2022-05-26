@@ -125,7 +125,7 @@ int threadpool_init(threadpool_t *p_tp, int tasks_limit)
 	p_tp->tasks_capacity = tasks_limit;
 	mutex_init(&p_tp->mutex);
 	cnd_init(&p_tp->cvtask);
-	cnd_init(&p_tp->cvfinish);
+	//cnd_init(&p_tp->cvfinish);
 	p_tp->p_tasks = (tptask_t *)calloc(p_tp->tasks_capacity, sizeof(tptask_t)); /* alloc memory for tasks */
 	if (p_tp->p_tasks) {
 		p_tp->num_of_threads = get_logical_processors_count();
@@ -137,6 +137,7 @@ int threadpool_init(threadpool_t *p_tp, int tasks_limit)
 					if (thread_create(&p_tp->p_threads[i], worker_thread_proc, p_tp)) {
 						//thread_setaffinity(&p_tp->p_threads[i], (void *)(1 << i));
 						SetThreadAffinityMask(p_tp->p_threads[i].handle, (1 << i));
+						SetThreadPriority(p_tp->p_threads[i].handle, THREAD_PRIORITY_HIGHEST);
 					}
 				}
 				p_tp->state = TPSTATUS_RUNNING; /* ok. set running state */

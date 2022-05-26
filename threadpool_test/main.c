@@ -5,7 +5,7 @@
 void task_proc(const tpstatus_t *p_statistics, void *param)
 {
 	int c = 0;
-	for (int i = 0; i < 100000; i++)
+	for (int i = 0; i < 10000; i++)
 		for (int k = 0; k < 10000; k++)
 			c = !c;
 
