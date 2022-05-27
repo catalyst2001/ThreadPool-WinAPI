@@ -54,6 +54,8 @@ bool mm_next_block(mm_block_information_t *p_dst_inf);
 // ------------------------------------
 typedef void *handle_t;
 
+#define HANDLE_MAGIC 0x4C444E48
+
 typedef enum HANDLE_STATUS_ {
 	HS_OK = 0,
 	HS_OUT_OF_MEMORY,
@@ -61,11 +63,11 @@ typedef enum HANDLE_STATUS_ {
 	HS_INVALID_HANDLE
 } HANDLE_STATUS;
 
-HANDLE_STATUS handle_create(handle_t *p_dst_handle, const char *p_description, size_t size);
+HANDLE_STATUS handle_create(handle_t *p_dst_handle, const char *p_description, void *p_data, size_t size);
 void         *handle_get_object(handle_t handle);
 size_t        handle_get_object_size(handle_t handle);
 bool          handle_is_valid(handle_t handle);
-handle_t      handle_duplicate(handle_t from);
+HANDLE_STATUS handle_duplicate(handle_t *p_to_handle, handle_t from);
 HANDLE_STATUS handle_close(handle_t handle);
 
 // 
