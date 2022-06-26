@@ -130,13 +130,13 @@ int threadpool_init(threadpool_t *p_tp, int tasks_limit)
 	if (p_tp->p_tasks) {
 		p_tp->num_of_threads = get_logical_processors_count();
 		if (p_tp->num_of_threads) {
-			p_tp->p_threads = (thread_t *)calloc(p_tp->num_of_threads, sizeof(tptask_t)); /* alloc memory for threads handles */
+			p_tp->p_threads = (thread_t *)calloc(p_tp->num_of_threads, sizeof(thread_t)); /* alloc memory for threads handles */
 			if (p_tp->p_threads) {
 				for (int i = 0; i < p_tp->num_of_threads; i++) {
 					//thread_create(&p_tp->p_threads[i], worker_thread_proc, p_tp);
 					if (thread_create(&p_tp->p_threads[i], worker_thread_proc, p_tp)) {
-						//thread_setaffinity(&p_tp->p_threads[i], (void *)(1 << i));
-						SetThreadAffinityMask(p_tp->p_threads[i].handle, (1 << i));
+						thread_setaffinity(&p_tp->p_threads[i], (void *)(1 << i));
+						//SetThreadAffinityMask(p_tp->p_threads[i].handle, (1 << i));
 						SetThreadPriority(p_tp->p_threads[i].handle, THREAD_PRIORITY_HIGHEST);
 					}
 				}

@@ -3,8 +3,10 @@
   <ItemGroup>
     <ClCompile Include="main.c" />
     <ClCompile Include="netmsg.c" />
+    <ClCompile Include="commsys.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="netmsg.h" />
+    <ClInclude Include="commsys.h" />
   </ItemGroup>
 </Project>

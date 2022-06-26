@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "memory_manager", "..\memory
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "netmsg_arch", "..\netmsg_arch\netmsg_arch.vcxproj", "{3222C9A4-373B-41D1-8D7A-EB7CC7A6BC57}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "terminal_test", "..\terminal_test\terminal_test.vcxproj", "{C101C7BD-42B0-401B-9791-3D32D3C62FEA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -51,6 +53,14 @@ Global
 		{3222C9A4-373B-41D1-8D7A-EB7CC7A6BC57}.Release|x64.Build.0 = Release|x64
 		{3222C9A4-373B-41D1-8D7A-EB7CC7A6BC57}.Release|x86.ActiveCfg = Release|Win32
 		{3222C9A4-373B-41D1-8D7A-EB7CC7A6BC57}.Release|x86.Build.0 = Release|Win32
+		{C101C7BD-42B0-401B-9791-3D32D3C62FEA}.Debug|x64.ActiveCfg = Debug|x64
+		{C101C7BD-42B0-401B-9791-3D32D3C62FEA}.Debug|x64.Build.0 = Debug|x64
+		{C101C7BD-42B0-401B-9791-3D32D3C62FEA}.Debug|x86.ActiveCfg = Debug|Win32
+		{C101C7BD-42B0-401B-9791-3D32D3C62FEA}.Debug|x86.Build.0 = Debug|Win32
+		{C101C7BD-42B0-401B-9791-3D32D3C62FEA}.Release|x64.ActiveCfg = Release|x64
+		{C101C7BD-42B0-401B-9791-3D32D3C62FEA}.Release|x64.Build.0 = Release|x64
+		{C101C7BD-42B0-401B-9791-3D32D3C62FEA}.Release|x86.ActiveCfg = Release|Win32
+		{C101C7BD-42B0-401B-9791-3D32D3C62FEA}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

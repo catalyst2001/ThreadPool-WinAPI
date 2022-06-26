@@ -151,10 +151,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="commsys.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="netmsg.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="commsys.h" />
     <ClInclude Include="netmsg.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
