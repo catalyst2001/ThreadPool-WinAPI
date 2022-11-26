@@ -17,11 +17,12 @@ int main()
 	threadpool_t tp;
 	threadpool_init(&tp, 1024);
 	while (1) {
-		getchar();
-
+		/*getchar();*/
 		printf("Added 20 tasks!\n");
 		for (int i = 0; i < 20; i++)
-			threadpool_add_task_and_wait(&tp, TPTP_HIGH, task_proc, NULL);
+			threadpool_add_task(&tp, TPTP_HIGH, task_proc, NULL);
+
+		threadpool_wait_tasks_execution(&tp);
 	}
 	threadpool_join(&tp);
 	threadpool_free(&tp);

@@ -101,14 +101,13 @@ void *worker_thread_proc(void *p_arg)
 		mutex_lock(&p_tp->mutex);
 
 		//if stack is empty
-		if (!p_tp->current_task)
+		if (!p_tp->current_task) {
+			SetEvent(p_tp->h_event_finish_tasks); //unlock event for waiting finish tasks
 			cnd_wait(&p_tp->cvtask, &p_tp->mutex); //freeze threads
-
-		if (p_tp->current_task > 0) {
-			p_tp->current_task--;
-		} else {
-			SetEvent(p_tp->h_event_finish_tasks);
 		}
+
+		if (p_tp->current_task > 0)
+			p_tp->current_task--;
 		
 		task = p_tp->p_tasks[p_tp->current_task];
 
