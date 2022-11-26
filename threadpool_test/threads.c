@@ -104,8 +104,11 @@ void *worker_thread_proc(void *p_arg)
 		if (!p_tp->current_task)
 			cnd_wait(&p_tp->cvtask, &p_tp->mutex); //freeze threads
 
-		if (p_tp->current_task > 0)
+		if (p_tp->current_task > 0) {
 			p_tp->current_task--;
+		} else {
+			SetEvent(p_tp->h_event_finish_tasks);
+		}
 		
 		task = p_tp->p_tasks[p_tp->current_task];
 
@@ -135,6 +138,7 @@ int threadpool_init(threadpool_t *p_tp, int tasks_limit)
 
 			//TODO:
 			p_tp->h_event = CreateEventA(0, FALSE, FALSE, NULL);
+			p_tp->h_event_finish_tasks = CreateEventA(0, FALSE, FALSE, NULL);
 
 			p_tp->p_threads = (thread_t *)calloc(p_tp->num_of_threads, sizeof(thread_t)); /* alloc memory for threads handles */
 			if (p_tp->p_threads) {
@@ -183,6 +187,14 @@ int threadpool_add_task_and_wait(threadpool_t *p_tp, int priority, TASKPROC task
 	return 0;
 }
 
+int threadpool_skip_all_tasks(threadpool_t *p_tp)
+{
+	InterlockedExchange(&p_tp->current_task, 0);
+
+	//TODO: restart busy threads
+	return 0;
+}
+
 int threadpool_suspend(threadpool_t *p_tp)
 {
 	for (int i = 0; i < p_tp->num_of_threads; i++)
@@ -202,6 +214,12 @@ int threadpool_resume(threadpool_t *p_tp)
 int threadpool_set_state(threadpool_t *p_tp, int _state)
 {
 	return InterlockedExchange(&p_tp->state, _state);
+}
+
+int threadpool_wait_tasks_execution(threadpool_t *p_tp)
+{
+	WaitForSingleObject(p_tp->h_event_finish_tasks, INFINITE);
+	return 0;
 }
 
 int threadpool_join(threadpool_t *p_tp)
@@ -225,5 +243,7 @@ int threadpool_free(threadpool_t *p_tp)
 		free(p_tp->p_threads);
 	}
 	mutex_deinit(&p_tp->mutex);
+	CloseHandle(p_tp->h_event);
+	CloseHandle(p_tp->h_event_finish_tasks);
 	return 1;
 }
