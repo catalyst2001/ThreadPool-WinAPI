@@ -1,0 +1,24 @@
+﻿  main.c
+  queue.c
+e:\github\threadpool-winapi\threadpool_test\queue.h(4): warning C4005: assert: изменение макроопределения
+  c:\program files (x86)\windows kits\10\include\10.0.19041.0\ucrt\assert.h(39): note: см. предыдущее определение "assert"
+e:\github\threadpool-winapi\threadpool_test\queue.c(10): error C4235: использовано нестандартное расширение: ключевое слово "__asm" данной архитектурой не поддерживается
+e:\github\threadpool-winapi\threadpool_test\queue.c(10): error C2059: синтаксическая ошибка: неправильный суффикс для числа
+e:\github\threadpool-winapi\threadpool_test\queue.c(10): error C2143: синтаксическая ошибка: отсутствие ";" перед "константа"
+e:\github\threadpool-winapi\threadpool_test\queue.c(10): warning C4091: : пропускается слева от "int", когда ни одна переменная не объявлена
+e:\github\threadpool-winapi\threadpool_test\queue.c(57): error C4235: использовано нестандартное расширение: ключевое слово "__asm" данной архитектурой не поддерживается
+e:\github\threadpool-winapi\threadpool_test\queue.c(57): error C2059: синтаксическая ошибка: неправильный суффикс для числа
+e:\github\threadpool-winapi\threadpool_test\queue.c(57): error C2143: синтаксическая ошибка: отсутствие ";" перед "константа"
+e:\github\threadpool-winapi\threadpool_test\queue.c(57): warning C4091: : пропускается слева от "int", когда ни одна переменная не объявлена
+e:\github\threadpool-winapi\threadpool_test\queue.c(114): error C4235: использовано нестандартное расширение: ключевое слово "__asm" данной архитектурой не поддерживается
+e:\github\threadpool-winapi\threadpool_test\queue.c(114): error C2059: синтаксическая ошибка: неправильный суффикс для числа
+e:\github\threadpool-winapi\threadpool_test\queue.c(114): error C2143: синтаксическая ошибка: отсутствие ";" перед "константа"
+e:\github\threadpool-winapi\threadpool_test\queue.c(114): warning C4091: : пропускается слева от "int", когда ни одна переменная не объявлена
+  threads.c
+e:\github\threadpool-winapi\threadpool_test\threads.c(19): warning C4047: функция: "SIZE_T" отличается по уровням косвенного обращения от "void *"
+e:\github\threadpool-winapi\threadpool_test\threads.c(19): warning C4024: CreateThread: различные типы для формального и фактического параметров 2
+e:\github\threadpool-winapi\threadpool_test\threads.c(19): warning C4047: функция: "DWORD" отличается по уровням косвенного обращения от "void *"
+e:\github\threadpool-winapi\threadpool_test\threads.c(19): warning C4024: CreateThread: различные типы для формального и фактического параметров 5
+e:\github\threadpool-winapi\threadpool_test\threads.c(138): warning C4312: приведение типов: преобразование из "int" в "void *" большего размера
+e:\github\threadpool-winapi\threadpool_test\threads.c(167): warning C4013: printf: нет определения; предполагается "extern" с возвратом типа "int"
+  Создание кода...

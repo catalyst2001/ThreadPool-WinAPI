@@ -21,7 +21,7 @@ int main()
 
 		printf("Added 20 tasks!\n");
 		for (int i = 0; i < 20; i++)
-			threadpool_add_task(&tp, TPTP_HIGH, task_proc, NULL);
+			threadpool_add_task_and_wait(&tp, TPTP_HIGH, task_proc, NULL);
 	}
 	threadpool_join(&tp);
 	threadpool_free(&tp);

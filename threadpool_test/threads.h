@@ -83,6 +83,7 @@ typedef struct threadpool_s {
 
 	int num_of_threads;
 	thread_t *p_threads;
+	HANDLE h_event;
 
 	mtx_t mutex;
 	cnd_t cvtask;
@@ -94,6 +95,7 @@ typedef struct threadpool_s {
 
 int threadpool_init(threadpool_t *p_tp, int tasks_limit);
 int threadpool_add_task(threadpool_t *p_tp, int priority, TASKPROC taskproc, void *p_arg);
+int threadpool_add_task_and_wait(threadpool_t *p_tp, int priority, TASKPROC taskproc, void *p_arg);
 int threadpool_suspend(threadpool_t *p_tp);
 int threadpool_resume(threadpool_t *p_tp);
 int threadpool_set_state(threadpool_t *p_tp, int _state);

@@ -104,9 +104,10 @@ void *worker_thread_proc(void *p_arg)
 		if (!p_tp->current_task)
 			cnd_wait(&p_tp->cvtask, &p_tp->mutex); //freeze threads
 
-		task = p_tp->p_tasks[p_tp->current_task];
 		if (p_tp->current_task > 0)
 			p_tp->current_task--;
+		
+		task = p_tp->p_tasks[p_tp->current_task];
 
 		// update tasks statistics
 		p_tp->statistic.active_threads = p_tp->num_of_threads;
@@ -115,6 +116,7 @@ void *worker_thread_proc(void *p_arg)
 		mutex_unlock(&p_tp->mutex);
 
 		task.taskproc(&p_tp->statistic, task.p_arg); // run asynch
+		SetEvent(p_tp->h_event);
 	}
 	return NULL;
 }
@@ -130,6 +132,10 @@ int threadpool_init(threadpool_t *p_tp, int tasks_limit)
 	if (p_tp->p_tasks) {
 		p_tp->num_of_threads = get_logical_processors_count();
 		if (p_tp->num_of_threads) {
+
+			//TODO:
+			p_tp->h_event = CreateEventA(0, FALSE, FALSE, NULL);
+
 			p_tp->p_threads = (thread_t *)calloc(p_tp->num_of_threads, sizeof(thread_t)); /* alloc memory for threads handles */
 			if (p_tp->p_threads) {
 				for (int i = 0; i < p_tp->num_of_threads; i++) {
@@ -137,7 +143,7 @@ int threadpool_init(threadpool_t *p_tp, int tasks_limit)
 					if (thread_create(&p_tp->p_threads[i], worker_thread_proc, p_tp)) {
 						thread_setaffinity(&p_tp->p_threads[i], (void *)(1 << i));
 						//SetThreadAffinityMask(p_tp->p_threads[i].handle, (1 << i));
-						SetThreadPriority(p_tp->p_threads[i].handle, THREAD_PRIORITY_HIGHEST);
+						SetThreadPriority(p_tp->p_threads[i].handle, THREAD_PRIORITY_NORMAL);
 					}
 				}
 				p_tp->state = TPSTATUS_RUNNING; /* ok. set running state */
@@ -157,16 +163,23 @@ int threadpool_add_task(threadpool_t *p_tp, int priority, TASKPROC taskproc, voi
 {
 	mutex_lock(&p_tp->mutex);
 	if (p_tp->current_task < p_tp->tasks_capacity) {
-		p_tp->current_task++; //TODO: KOSTYL!
 		tptask_t *p_task = &p_tp->p_tasks[p_tp->current_task];
 		p_task->priority = priority;
 		p_task->taskproc = taskproc;
 		p_task->p_arg = p_arg;
 		cnd_wake_one(&p_tp->cvtask);
+		p_tp->current_task++; //TODO: KOSTYL!
 
 		printf("task %d | proc 0x%x | arg 0x%x\n", p_tp->current_task, p_task->taskproc, p_task->p_arg);
 	}
 	mutex_unlock(&p_tp->mutex);
+	return 0;
+}
+
+int threadpool_add_task_and_wait(threadpool_t *p_tp, int priority, TASKPROC taskproc, void * p_arg)
+{
+	threadpool_add_task(p_tp, priority, taskproc, p_arg);
+	WaitForSingleObject(p_tp->h_event, INFINITE);
 	return 0;
 }
 
