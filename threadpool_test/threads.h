@@ -1,6 +1,7 @@
 #pragma once
 #include <Windows.h>
 #include <stdbool.h>
+#include <time.h>
 #include <assert.h>
 
 // ---------------------
@@ -62,6 +63,8 @@ enum TP_STATUS {
 	TPSTATUS_FINISH
 };
 
+#define TASK_NO_EXECUTED (-1)
+
 typedef struct tpstatus_s {
 	int active_threads;
 	int task_sequence;
@@ -72,9 +75,20 @@ typedef void (*TASKPROC)(const tpstatus_t *p_status, void *arg);
 
 typedef struct tptask_s {
 	int priority;
+	int *p_workerid;
 	void *p_arg;
+	time_t task_running_time;
+	time_t task_timeout;
 	TASKPROC taskproc;
 } tptask_t;
+
+struct threadpool_s;
+
+typedef struct tpworker_s {
+	thread_t h_worker_thread;
+	int worker_thread_id;
+	struct threadpool_s *p_tp;
+} tpworker_t;
 
 typedef struct threadpool_s {
 	int tasks_capacity;
@@ -82,7 +96,7 @@ typedef struct threadpool_s {
 	tptask_t *p_tasks;
 
 	int num_of_threads;
-	thread_t *p_threads;
+	tpworker_t *p_workers;
 	HANDLE h_event;
 	HANDLE h_event_finish_tasks;
 
@@ -92,11 +106,17 @@ typedef struct threadpool_s {
 
 	int state;
 	tpstatus_t statistic;
+	time_t global_timeout;
 } threadpool_t;
 
+/*
+ TODO: add watchdog thread (new thread or use TryEnterCriticalSection)
+
+*/
+
 int threadpool_init(threadpool_t *p_tp, int tasks_limit);
-int threadpool_add_task(threadpool_t *p_tp, int priority, TASKPROC taskproc, void *p_arg);
-int threadpool_add_task_and_wait(threadpool_t *p_tp, int priority, TASKPROC taskproc, void *p_arg);
+int threadpool_add_task(threadpool_t *p_tp, int *p_dst_workerid, int priority, TASKPROC taskproc, void *p_arg);
+int threadpool_add_task_and_wait(threadpool_t *p_tp, int *p_dst_workerid, int priority, TASKPROC taskproc, void *p_arg);
 int threadpool_skip_all_tasks(threadpool_t *p_tp);
 int threadpool_wait_tasks_execution(threadpool_t *p_tp);
 int threadpool_suspend(threadpool_t *p_tp);
@@ -104,3 +124,4 @@ int threadpool_resume(threadpool_t *p_tp);
 int threadpool_set_state(threadpool_t *p_tp, int _state);
 int threadpool_join(threadpool_t *p_tp);
 int threadpool_free(threadpool_t *p_tp);
+int threadpool_set_timeout(threadpool_t *p_tp, time_t timeout);

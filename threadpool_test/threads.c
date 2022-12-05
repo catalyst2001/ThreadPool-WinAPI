@@ -95,7 +95,10 @@ void cnd_wait(cnd_t *p_condvar, mtx_t *p_mutex)
 ///////////////////////////////////////////////////////////////////////////////////
 void *worker_thread_proc(void *p_arg)
 {
-	threadpool_t *p_tp = (threadpool_t *)p_arg;
+	tpworker_t *p_worker_data = (tpworker_t *)p_arg;
+	threadpool_t *p_tp = p_worker_data->p_tp;
+	//TODO: store current thread context for restore when a job hangs or is canceled
+
 	while (p_tp->state == TPSTATUS_RUNNING) {
 		tptask_t task;
 		mutex_lock(&p_tp->mutex);
@@ -103,13 +106,18 @@ void *worker_thread_proc(void *p_arg)
 		//if stack is empty
 		if (!p_tp->current_task) {
 			SetEvent(p_tp->h_event_finish_tasks); //unlock event for waiting finish tasks
-			cnd_wait(&p_tp->cvtask, &p_tp->mutex); //freeze threads
+			cnd_wait(&p_tp->cvtask, &p_tp->mutex); //freeze thread
 		}
 
 		if (p_tp->current_task > 0)
 			p_tp->current_task--;
 		
 		task = p_tp->p_tasks[p_tp->current_task];
+		if(task.p_workerid)
+			*task.p_workerid = p_worker_data->worker_thread_id;
+
+		task.task_running_time = time(NULL);
+		task.task_timeout = 0; //TODO: CHANGE THIS
 
 		// update tasks statistics
 		p_tp->statistic.active_threads = p_tp->num_of_threads;
@@ -139,20 +147,23 @@ int threadpool_init(threadpool_t *p_tp, int tasks_limit)
 			p_tp->h_event = CreateEventA(0, FALSE, FALSE, NULL);
 			p_tp->h_event_finish_tasks = CreateEventA(0, FALSE, FALSE, NULL);
 
-			p_tp->p_threads = (thread_t *)calloc(p_tp->num_of_threads, sizeof(thread_t)); /* alloc memory for threads handles */
-			if (p_tp->p_threads) {
+			p_tp->p_workers = (tpworker_t *)calloc(p_tp->num_of_threads, sizeof(tpworker_t)); /* alloc memory for threads handles */
+			if (p_tp->p_workers) {
 				for (int i = 0; i < p_tp->num_of_threads; i++) {
-					//thread_create(&p_tp->p_threads[i], worker_thread_proc, p_tp);
-					if (thread_create(&p_tp->p_threads[i], worker_thread_proc, p_tp)) {
-						thread_setaffinity(&p_tp->p_threads[i], (void *)(1 << i));
-						//SetThreadAffinityMask(p_tp->p_threads[i].handle, (1 << i));
-						SetThreadPriority(p_tp->p_threads[i].handle, THREAD_PRIORITY_NORMAL);
+					//thread_create(&p_tp->p_workers[i], worker_thread_proc, p_tp);
+
+					p_tp->p_workers[i].p_tp = p_tp;
+					p_tp->p_workers[i].worker_thread_id = i;
+					if (thread_create(&p_tp->p_workers[i].h_worker_thread, worker_thread_proc, &p_tp->p_workers[i])) {
+						thread_setaffinity(&p_tp->p_workers[i], (void *)(1 << i));
+						//SetThreadAffinityMask(p_tp->p_workers[i].handle, (1 << i));
+						SetThreadPriority(p_tp->p_workers[i].h_worker_thread.handle, THREAD_PRIORITY_BELOW_NORMAL);
 					}
 				}
 				p_tp->state = TPSTATUS_RUNNING; /* ok. set running state */
 				return 0;
 			}
-			assert(p_tp->p_threads);
+			assert(p_tp->p_workers);
 			return 3;
 		}
 		assert(p_tp->num_of_threads);
@@ -162,16 +173,20 @@ int threadpool_init(threadpool_t *p_tp, int tasks_limit)
 	return 1;
 }
 
-int threadpool_add_task(threadpool_t *p_tp, int priority, TASKPROC taskproc, void *p_arg)
+int threadpool_add_task(threadpool_t *p_tp, int *p_dst_workerid, int priority, TASKPROC taskproc, void *p_arg)
 {
 	mutex_lock(&p_tp->mutex);
+	if(p_dst_workerid)
+		*p_dst_workerid = TASK_NO_EXECUTED; //set not executed value
+
 	if (p_tp->current_task < p_tp->tasks_capacity) {
 		tptask_t *p_task = &p_tp->p_tasks[p_tp->current_task];
 		p_task->priority = priority;
 		p_task->taskproc = taskproc;
 		p_task->p_arg = p_arg;
+		p_task->p_workerid = p_dst_workerid;
 		cnd_wake_one(&p_tp->cvtask);
-		p_tp->current_task++; //TODO: KOSTYL!
+		p_tp->current_task++;
 
 		printf("task %d | proc 0x%x | arg 0x%x\n", p_tp->current_task, p_task->taskproc, p_task->p_arg);
 	}
@@ -179,9 +194,9 @@ int threadpool_add_task(threadpool_t *p_tp, int priority, TASKPROC taskproc, voi
 	return 0;
 }
 
-int threadpool_add_task_and_wait(threadpool_t *p_tp, int priority, TASKPROC taskproc, void * p_arg)
+int threadpool_add_task_and_wait(threadpool_t *p_tp, int *p_dst_workerid, int priority, TASKPROC taskproc, void * p_arg)
 {
-	threadpool_add_task(p_tp, priority, taskproc, p_arg);
+	threadpool_add_task(p_tp, p_dst_workerid, priority, taskproc, p_arg);
 	WaitForSingleObject(p_tp->h_event, INFINITE);
 	return 0;
 }
@@ -197,7 +212,7 @@ int threadpool_skip_all_tasks(threadpool_t *p_tp)
 int threadpool_suspend(threadpool_t *p_tp)
 {
 	for (int i = 0; i < p_tp->num_of_threads; i++)
-		thread_suspend(&p_tp->p_threads[i]);
+		thread_suspend(&p_tp->p_workers[i].h_worker_thread);
 
 	return 1;
 }
@@ -205,7 +220,7 @@ int threadpool_suspend(threadpool_t *p_tp)
 int threadpool_resume(threadpool_t *p_tp)
 {
 	for (int i = 0; i < p_tp->num_of_threads; i++)
-		thread_resume(&p_tp->p_threads[i]);
+		thread_resume(&p_tp->p_workers[i]);
 
 	return 1;
 }
@@ -224,7 +239,7 @@ int threadpool_wait_tasks_execution(threadpool_t *p_tp)
 int threadpool_join(threadpool_t *p_tp)
 {
 	for (int i = 0; i < p_tp->num_of_threads; i++)
-		thread_join(&p_tp->p_threads[i]);
+		thread_join(&p_tp->p_workers[i]);
 
 	return 1;
 }
@@ -235,11 +250,11 @@ int threadpool_free(threadpool_t *p_tp)
 	if (p_tp->p_tasks)
 		free(p_tp->p_tasks);
 
-	if (p_tp->p_threads) {
+	if (p_tp->p_workers) {
 		for (int i = 0; i < p_tp->num_of_threads; i++)
-			thread_detach(&p_tp->p_threads[i]);
+			thread_detach(&p_tp->p_workers[i].h_worker_thread);
 
-		free(p_tp->p_threads);
+		free(p_tp->p_workers);
 	}
 	mutex_deinit(&p_tp->mutex);
 	CloseHandle(p_tp->h_event);
