@@ -239,7 +239,7 @@ int threadpool_wait_tasks_execution(threadpool_t *p_tp)
 int threadpool_join(threadpool_t *p_tp)
 {
 	for (int i = 0; i < p_tp->num_of_threads; i++)
-		thread_join(&p_tp->p_workers[i]);
+		thread_join(&p_tp->p_workers[i].h_worker_thread);
 
 	return 1;
 }
